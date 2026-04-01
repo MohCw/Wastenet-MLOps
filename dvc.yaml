@@ -1,0 +1,26 @@
+stages:
+  prepare:
+    cmd: poetry run python -m garbage_classification.dataset prepare
+    deps:
+      - garbage_classification/dataset.py
+      - data/raw/Garbage classification/Garbage classification/
+    params:
+      - prepare.image_extensions
+    outs:
+      - data/interim/cleaned/
+
+  split:
+    cmd: poetry run python -m garbage_classification.dataset split
+    deps:
+      - garbage_classification/dataset.py
+      - data/interim/cleaned/
+      - data/raw/one-indexed-files-notrash_train.txt
+      - data/raw/one-indexed-files-notrash_val.txt
+      - data/raw/one-indexed-files-notrash_test.txt
+      - data/raw/class_mapping.csv
+    params:
+      - split.seed
+    outs:
+      - data/processed/train/
+      - data/processed/val/
+      - data/processed/test/

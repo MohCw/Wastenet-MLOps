@@ -1,0 +1,73 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: poetry run python -m garbage_classification.dataset prepare
+    deps:
+    - path: data/raw/Garbage classification/Garbage classification/
+      hash: md5
+      md5: 2dc95c0f0adfa3c354b4c80d8aff2c3b.dir
+      size: 43282402
+      nfiles: 2527
+    - path: garbage_classification/dataset.py
+      hash: md5
+      md5: 22d60e6526e2039b0294045a4d3bf219
+      size: 4526
+    params:
+      params.yaml:
+        prepare.image_extensions:
+        - .jpg
+        - .jpeg
+        - .png
+    outs:
+    - path: data/interim/cleaned/
+      hash: md5
+      md5: 839ab736c53571ca565b7c5ecadc0858.dir
+      size: 43201834
+      nfiles: 2521
+  split:
+    cmd: poetry run python -m garbage_classification.dataset split
+    deps:
+    - path: data/interim/cleaned/
+      hash: md5
+      md5: 839ab736c53571ca565b7c5ecadc0858.dir
+      size: 43201834
+      nfiles: 2521
+    - path: data/raw/class_mapping.csv
+      hash: md5
+      md5: 2ad8b40d0564cb39eb47480197c76bc8
+      size: 102
+    - path: data/raw/one-indexed-files-notrash_test.txt
+      hash: md5
+      md5: f2704514ea6a1565c6efef08ae41dedc
+      size: 6774
+    - path: data/raw/one-indexed-files-notrash_train.txt
+      hash: md5
+      md5: 40dba957aeae1b6a729c65e196d0d636
+      size: 27912
+    - path: data/raw/one-indexed-files-notrash_val.txt
+      hash: md5
+      md5: 518bb0bf6bb2366d08ef1e7d3eae135f
+      size: 5147
+    - path: garbage_classification/dataset.py
+      hash: md5
+      md5: 22d60e6526e2039b0294045a4d3bf219
+      size: 4526
+    params:
+      params.yaml:
+        split.seed: 42
+    outs:
+    - path: data/processed/test/
+      hash: md5
+      md5: 678020576642bab0e9bcec846ee62302.dir
+      size: 7606528
+      nfiles: 430
+    - path: data/processed/train/
+      hash: md5
+      md5: dcaaaac6a4b59951b904fa1632ff1025.dir
+      size: 29949221
+      nfiles: 1764
+    - path: data/processed/val/
+      hash: md5
+      md5: fc53486c392d4be6204e56a5e89f0b16.dir
+      size: 5646085
+      nfiles: 327

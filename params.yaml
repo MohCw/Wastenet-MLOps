@@ -1,0 +1,5 @@
+prepare:
+  image_extensions: [".jpg", ".jpeg", ".png"]
+
+split:
+  seed: 42
