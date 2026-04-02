@@ -24,3 +24,37 @@ stages:
       - data/processed/train/
       - data/processed/val/
       - data/processed/test/
+
+  train:
+    cmd: poetry run python -m garbage_classification.modeling.train
+    deps:
+      - garbage_classification/modeling/train.py
+      - data/processed/train/
+      - data/processed/val/
+    params:
+      - train.epochs
+      - train.batch_size
+      - train.lr
+      - train.model_arch
+      - train.strategy
+      - train.early_stopping_patience
+    outs:
+      - models/model.pth
+    metrics:
+      - metrics/train_metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: poetry run python -m garbage_classification.modeling.predict
+    deps:
+      - garbage_classification/modeling/predict.py
+      - data/processed/test/
+      - models/model.pth
+    params:
+      - evaluate.batch_size
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
+    plots:
+      - metrics/confusion_matrix.csv:
+          cache: false

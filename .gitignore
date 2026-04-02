@@ -186,3 +186,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# models
+models/*.pth
+models/*.pkl
+/mlruns/
+/mlflow.db

@@ -3,3 +3,14 @@ prepare:
 
 split:
   seed: 42
+
+train:
+  epochs: 30
+  batch_size: 32
+  lr: 0.001
+  model_arch: resnet18
+  strategy: "v1"
+  early_stopping_patience: 5
+
+evaluate:
+  batch_size: 32

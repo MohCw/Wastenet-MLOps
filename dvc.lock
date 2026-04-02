@@ -71,3 +71,65 @@ stages:
       md5: fc53486c392d4be6204e56a5e89f0b16.dir
       size: 5646085
       nfiles: 327
+  train:
+    cmd: poetry run python -m garbage_classification.modeling.train
+    deps:
+    - path: data/processed/train/
+      hash: md5
+      md5: dcaaaac6a4b59951b904fa1632ff1025.dir
+      size: 29949221
+      nfiles: 1764
+    - path: data/processed/val/
+      hash: md5
+      md5: fc53486c392d4be6204e56a5e89f0b16.dir
+      size: 5646085
+      nfiles: 327
+    - path: garbage_classification/modeling/train.py
+      hash: md5
+      md5: 42babf4e4de885833b5cfc59ff825663
+      size: 7538
+    params:
+      params.yaml:
+        train.batch_size: 32
+        train.early_stopping_patience: 5
+        train.epochs: 30
+        train.lr: 0.001
+        train.model_arch: resnet18
+        train.strategy: v1
+    outs:
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: f77561941294302f35013a1696287f5a
+      size: 104
+    - path: models/model.pth
+      hash: md5
+      md5: ec6c1fca698578c73bf0c91d4c267b23
+      size: 44790859
+  evaluate:
+    cmd: poetry run python -m garbage_classification.modeling.predict
+    deps:
+    - path: data/processed/test/
+      hash: md5
+      md5: 678020576642bab0e9bcec846ee62302.dir
+      size: 7606528
+      nfiles: 430
+    - path: garbage_classification/modeling/predict.py
+      hash: md5
+      md5: 4dc6cdd77e3e994723e29d0c0901d6b2
+      size: 3224
+    - path: models/model.pth
+      hash: md5
+      md5: ec6c1fca698578c73bf0c91d4c267b23
+      size: 44790859
+    params:
+      params.yaml:
+        evaluate.batch_size: 32
+    outs:
+    - path: metrics/confusion_matrix.csv
+      hash: md5
+      md5: c25674199439b6b4f0ff0cd59c0743b7
+      size: 171
+    - path: metrics/eval_metrics.json
+      hash: md5
+      md5: 7ece1740ee2e4ed69b1c6164637710e6
+      size: 78
