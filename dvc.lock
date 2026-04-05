@@ -86,8 +86,8 @@ stages:
       nfiles: 327
     - path: garbage_classification/modeling/train.py
       hash: md5
-      md5: 42babf4e4de885833b5cfc59ff825663
-      size: 7538
+      md5: e867b8199a020699add5acf36ea45311
+      size: 8963
     params:
       params.yaml:
         train.batch_size: 32
@@ -95,7 +95,7 @@ stages:
         train.epochs: 30
         train.lr: 0.001
         train.model_arch: resnet18
-        train.strategy: v1
+        train.strategy: linear_probe
     outs:
     - path: metrics/train_metrics.json
       hash: md5
@@ -115,8 +115,8 @@ stages:
       nfiles: 430
     - path: garbage_classification/modeling/predict.py
       hash: md5
-      md5: 4dc6cdd77e3e994723e29d0c0901d6b2
-      size: 3224
+      md5: 9d736a3e8a2a10d22c1f5d543a9b5931
+      size: 3173
     - path: models/model.pth
       hash: md5
       md5: ec6c1fca698578c73bf0c91d4c267b23

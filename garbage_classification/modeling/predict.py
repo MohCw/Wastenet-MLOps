@@ -29,9 +29,7 @@ def main(
 ):
     METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
-    TRAIN_PARAMS = yaml.safe_load((PROJ_ROOT / "params.yaml").read_text())["train"]
-    strategy = TRAIN_PARAMS.get("strategy", "v1")
-    mlflow.set_experiment("garbage-classification")
+    mlflow.set_experiment("garbage-classification/architecture-search")
 
     logger.info(f"Model   : {model_path}")
     logger.info(f"Test dir: {test_dir}")
@@ -69,9 +67,10 @@ def main(
     test_acc = report["accuracy"]
     test_f1_mac = report["macro avg"]["f1-score"]
     
-    with mlflow.start_run(run_name=f"eval_resnet18_{strategy}"):
+    run_id_file = METRICS_DIR / "mlflow_run_id.txt"
+    run_id = run_id_file.read_text().strip() if run_id_file.exists() else None
+    with mlflow.start_run(run_id=run_id):
         mlflow.set_tag("stage", "evaluate")
-        mlflow.set_tag("strategy", strategy)
         mlflow.log_metrics({"test_acc": test_acc, "test_f1_macro": test_f1_mac})
         for cls in CLASS_NAMES:
             mlflow.log_metric(f"f1_{cls}", report[cls]["f1-score"])

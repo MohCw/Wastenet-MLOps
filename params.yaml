@@ -9,7 +9,7 @@ train:
   batch_size: 32
   lr: 0.001
   model_arch: resnet18
-  strategy: "v1"
+  strategy: "linear_probe"
   early_stopping_patience: 5
 
 evaluate:

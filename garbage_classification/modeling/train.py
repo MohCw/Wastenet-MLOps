@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
 import mlflow
 import mlflow.pytorch
+from mlflow.models import infer_signature
+from mlflow.tracking import MlflowClient
 import typer
 import yaml
 from loguru import logger
@@ -68,8 +70,9 @@ def main(
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
-    strategy = PARAMS.get("strategy", "v1")
-    mlflow.set_experiment("garbage-classification")
+    strategy = PARAMS.get("strategy", "linear_probe")
+    model_arch = PARAMS.get("model_arch", "resnet18")
+    mlflow.set_experiment("garbage-classification/architecture-search")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -111,7 +114,7 @@ def main(
     
     NUM_CLASSES   = len(train_dataset.classes)
 
-    with mlflow.start_run(run_name=f"resnet18_{strategy}"):
+    with mlflow.start_run(run_name=f"{model_arch}_{strategy}") as run:
         mlflow.log_params(PARAMS)
         mlflow.set_tag("strategy", strategy)
         mlflow.set_tag("model_arch", PARAMS.get("model_arch", "resnet18"))
@@ -121,16 +124,16 @@ def main(
         model = models.resnet18(weights="IMAGENET1K_V1")
         model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
 
-        if strategy == "v1":
-            # v1 - Baseline: freeze everything except fc
+        if strategy == "linear_probe":
+            # linear_probe: freeze backbone, train classification head only
             for name, param in model.named_parameters():
                 if "fc" not in name:
                     param.requires_grad = False
             optimizer = torch.optim.Adam(model.fc.parameters(), lr=1e-3)
-            logger.info("Strategy v1: Baseline (fc only)")
+            logger.info("Strategy linear_probe: head only")
 
-        elif strategy == "v2":
-            # v2 - Layer4 unfreeze: unfreeze layer4 and fc
+        elif strategy == "partial_finetune":
+            # partial_finetune: unfreeze top layers (layer4) + classification head
             for name, param in model.named_parameters():
                 if "layer4" not in name and "fc" not in name:
                     param.requires_grad = False
@@ -138,10 +141,10 @@ def main(
                 {"params": filter(lambda p: p.requires_grad, model.layer4.parameters()), "lr": 1e-4},
                 {"params": model.fc.parameters(), "lr": 1e-3}
             ])
-            logger.info("Strategy v2: Layer4 unfreeze")
+            logger.info("Strategy partial_finetune: top layers + head")
 
-        elif strategy == "v3":
-            # v3 - Full fine-tune: unfreeze everything, use diff lr for backbone and fc
+        elif strategy == "full_finetune":
+            # full_finetune: unfreeze all layers with differential learning rates
             backbone_params = []
             for name, param in model.named_parameters():
                 if "fc" not in name:
@@ -150,7 +153,7 @@ def main(
                 {"params": backbone_params, "lr": 1e-5},
                 {"params": model.fc.parameters(), "lr": 1e-4}
             ])
-            logger.info("Strategy v3: Full fine-tune")
+            logger.info("Strategy full_finetune: all layers")
 
         else:
             raise ValueError(f"Unknown strategy: {strategy}")
@@ -189,10 +192,29 @@ def main(
                     logger.info(f"Early stopping triggered at epoch {epoch+1} (patience={PARAMS['early_stopping_patience']})")
                     break
         
-        # Save model + metrics 
+        # Save model + metrics
         mlflow.log_metrics({"best_val_acc": best_val_acc, "best_val_loss": best_val_loss})
         mlflow.log_metric("epochs_run", epochs_run)
-        mlflow.pytorch.log_model(model, "model")
+
+        # Infer model signature from a dummy input
+        model.eval()
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, 3, 224, 224).to(device)
+            dummy_output = model(dummy_input)
+        signature = infer_signature(dummy_input.cpu().numpy(), dummy_output.cpu().numpy())
+
+        # Log + register the model in the MLflow Model Registry
+        mlflow.pytorch.log_model(model, name="model", registered_model_name="garbage-classifier", signature=signature)
+
+        # Assign the @champion alias to this newly registered version
+        client = MlflowClient()
+        run_id = mlflow.active_run().info.run_id
+        versions = client.search_model_versions(f"run_id='{run_id}'")
+        if versions:
+            latest_version = versions[0].version
+            client.set_registered_model_alias("garbage-classifier", "champion", latest_version)
+            mlflow.set_tag("registered_model_version", latest_version)
+            logger.info(f"Model registered as 'garbage-classifier' v{latest_version} — alias @champion assigned")
 
         train_metrics = {
             "best_val_acc": best_val_acc,
@@ -201,6 +223,9 @@ def main(
         }
         metrics_path.write_text(json.dumps(train_metrics, indent=2))
         mlflow.log_artifact(str(metrics_path))
+
+        # Persist run_id so evaluate stage logs to the same run
+        (METRICS_DIR / "mlflow_run_id.txt").write_text(run.info.run_id)
 
     logger.success(f"Training complete — model → {model_path}")
 
