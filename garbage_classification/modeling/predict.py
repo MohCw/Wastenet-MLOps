@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
 
+import timm
+from timm.data import resolve_data_config, create_transform
+
 import torch
-import torch.nn as nn
 import pandas as pd
 from torch.utils.data import DataLoader
-from torchvision import datasets, models, transforms
+from torchvision import datasets
 from sklearn.metrics import classification_report, confusion_matrix
 
 import mlflow
@@ -26,6 +28,7 @@ def main(
     model_path: Path = MODELS_DIR / "model.pth",
     metrics_path: Path = METRICS_DIR / "eval_metrics.json",
     confusion_matrix_path: Path = METRICS_DIR / "confusion_matrix.csv",
+    metadata_path: Path = MODELS_DIR / "model_metadata.json",
 ):
     METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -36,25 +39,25 @@ def main(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    test_transform = transforms.Compose([
-        transforms.Resize(256), transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-    ])
+    # Load model from metadata (arch + num_classes saved by train.py)
+    metadata = json.loads(metadata_path.read_text())
+    model = timm.create_model(metadata["arch"], pretrained=False, num_classes=metadata["num_classes"])
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model = model.to(device).eval()
+
+    # Correct transforms for this architecture (input_size, mean, std from pretrained_cfg)
+    data_cfg = resolve_data_config(model.pretrained_cfg, model=model)
+    test_transform = create_transform(**data_cfg, is_training=False)
 
     test_dataset = datasets.ImageFolder(test_dir, transform=test_transform)
-    test_loader = DataLoader(test_dataset, 
-                            batch_size=PARAMS["batch_size"],
-                            shuffle=False,
-                            num_workers=0)
+    test_loader  = DataLoader(
+        test_dataset,
+        batch_size=PARAMS["batch_size"],
+        shuffle=False,
+        num_workers=0,
+    )
     CLASS_NAMES = test_dataset.classes
 
-    model = models.resnet18(weights=None)   # weights=None : on charge nos propres poids
-    model.fc = nn.Linear(model.fc.in_features, len(CLASS_NAMES))
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    model = model.to(device)
-    model.eval()
-    #
     all_preds, all_labels = [], []
     with torch.no_grad():
         for images, labels in test_loader:
@@ -62,11 +65,11 @@ def main(
             all_preds.extend(preds.cpu().tolist())
             all_labels.extend(labels.tolist())
 
-    report = classification_report(all_labels, all_preds, target_names=CLASS_NAMES, output_dict=True)
-    cm = confusion_matrix(all_labels, all_preds)
-    test_acc = report["accuracy"]
+    report     = classification_report(all_labels, all_preds, target_names=CLASS_NAMES, output_dict=True)
+    cm         = confusion_matrix(all_labels, all_preds)
+    test_acc   = report["accuracy"]
     test_f1_mac = report["macro avg"]["f1-score"]
-    
+
     run_id_file = METRICS_DIR / "mlflow_run_id.txt"
     run_id = run_id_file.read_text().strip() if run_id_file.exists() else None
     with mlflow.start_run(run_id=run_id):
@@ -76,11 +79,11 @@ def main(
             mlflow.log_metric(f"f1_{cls}", report[cls]["f1-score"])
         pd.DataFrame(cm, index=CLASS_NAMES, columns=CLASS_NAMES).to_csv(confusion_matrix_path)
         mlflow.log_artifact(str(confusion_matrix_path))
-        
-    logger.success(f"Evaluation complete — metrics → {metrics_path}")
-    
+
     eval_metrics = {"test_acc": test_acc, "test_f1_macro": test_f1_mac}
     metrics_path.write_text(json.dumps(eval_metrics, indent=2))
+    logger.success(f"Evaluation complete — metrics → {metrics_path}")
+
 
 if __name__ == "__main__":
     app()

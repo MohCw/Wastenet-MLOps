@@ -38,8 +38,11 @@ stages:
       - train.model_arch
       - train.strategy
       - train.early_stopping_patience
+      - train.scheduler          
+      - train.warmup_epochs
     outs:
       - models/model.pth
+      - models/model_metadata.json
     metrics:
       - metrics/train_metrics.json:
           cache: false
@@ -50,6 +53,7 @@ stages:
       - garbage_classification/modeling/predict.py
       - data/processed/test/
       - models/model.pth
+      - models/model_metadata.json
     params:
       - evaluate.batch_size
     metrics:

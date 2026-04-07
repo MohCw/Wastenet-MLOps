@@ -195,3 +195,6 @@ models/*.pth
 models/*.pkl
 /mlruns/
 /mlflow.db
+
+
+notes/

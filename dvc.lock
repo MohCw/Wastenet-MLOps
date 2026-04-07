@@ -86,25 +86,31 @@ stages:
       nfiles: 327
     - path: garbage_classification/modeling/train.py
       hash: md5
-      md5: e867b8199a020699add5acf36ea45311
-      size: 8963
+      md5: 3aaef978466f9b608a30bb2694fe8a22
+      size: 12811
     params:
       params.yaml:
         train.batch_size: 32
-        train.early_stopping_patience: 5
-        train.epochs: 30
+        train.early_stopping_patience: 10
+        train.epochs: 50
         train.lr: 0.001
-        train.model_arch: resnet18
-        train.strategy: linear_probe
+        train.model_arch: convnext_tiny.in12k_ft_in1k
+        train.scheduler: cosine
+        train.strategy: full_finetune
+        train.warmup_epochs: 3
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: f77561941294302f35013a1696287f5a
-      size: 104
+      md5: 5f890a8c98aa9cd01d2aa9dba4ad365d
+      size: 103
     - path: models/model.pth
       hash: md5
-      md5: ec6c1fca698578c73bf0c91d4c267b23
-      size: 44790859
+      md5: f46c7718a094af2df45b35756ea2b857
+      size: 111357211
+    - path: models/model_metadata.json
+      hash: md5
+      md5: 0ee09f94d48ab1a1bf87dc903b904a98
+      size: 110
   evaluate:
     cmd: poetry run python -m garbage_classification.modeling.predict
     deps:
@@ -115,21 +121,25 @@ stages:
       nfiles: 430
     - path: garbage_classification/modeling/predict.py
       hash: md5
-      md5: 9d736a3e8a2a10d22c1f5d543a9b5931
-      size: 3173
+      md5: 49e381c406fc72cb72445b28a013e6cf
+      size: 3290
     - path: models/model.pth
       hash: md5
-      md5: ec6c1fca698578c73bf0c91d4c267b23
-      size: 44790859
+      md5: f46c7718a094af2df45b35756ea2b857
+      size: 111357211
+    - path: models/model_metadata.json
+      hash: md5
+      md5: 0ee09f94d48ab1a1bf87dc903b904a98
+      size: 110
     params:
       params.yaml:
         evaluate.batch_size: 32
     outs:
     - path: metrics/confusion_matrix.csv
       hash: md5
-      md5: c25674199439b6b4f0ff0cd59c0743b7
+      md5: 3d873ea29aca7fa41c2cbf10f1aa838d
       size: 171
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: 7ece1740ee2e4ed69b1c6164637710e6
+      md5: 2abd64fb54fa155f95ffdaa26d2bb5c5
       size: 78

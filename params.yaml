@@ -5,12 +5,14 @@ split:
   seed: 42
 
 train:
-  epochs: 30
+  epochs: 50
   batch_size: 32
   lr: 0.001
-  model_arch: resnet18
-  strategy: "linear_probe"
-  early_stopping_patience: 5
+  model_arch: convnext_tiny.in12k_ft_in1k
+  strategy: "full_finetune" # linear_probe | full_finetune | partial_finetune
+  early_stopping_patience: 10
+  scheduler: "cosine"  # none | cosine | plateau
+  warmup_epochs: 3  
 
 evaluate:
   batch_size: 32
