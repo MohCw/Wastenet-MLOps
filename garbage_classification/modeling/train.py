@@ -213,9 +213,9 @@ def main(
     model = model.to(device)
 
     with mlflow.start_run(run_name=f"{model_arch}_{strategy}") as run:
-        mlflow.log_params(PARAMS)
-        if PARAMS.get("scheduler") != "cosine":
-            mlflow.log_param("warmup_epochs", "N/A")
+        params_to_log = {k: v for k, v in PARAMS.items() if k != "warmup_epochs"}
+        params_to_log["warmup_epochs"] = warmup_epochs if scheduler_name == "cosine" else "N/A"
+        mlflow.log_params(params_to_log)
         mlflow.set_tag("strategy", strategy)
         mlflow.set_tag("model_arch", model_arch)
         mlflow.set_tags(get_git_info())

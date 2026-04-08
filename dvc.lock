@@ -86,8 +86,8 @@ stages:
       nfiles: 327
     - path: garbage_classification/modeling/train.py
       hash: md5
-      md5: 3aaef978466f9b608a30bb2694fe8a22
-      size: 12811
+      md5: cd2c79c2fe8ca9f6d18f47cdf36a955b
+      size: 12895
     params:
       params.yaml:
         train.batch_size: 32
@@ -95,17 +95,17 @@ stages:
         train.epochs: 50
         train.lr: 0.001
         train.model_arch: convnext_tiny.in12k_ft_in1k
-        train.scheduler: cosine
-        train.strategy: full_finetune
+        train.scheduler: plateau
+        train.strategy: linear_probe
         train.warmup_epochs: 3
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 5f890a8c98aa9cd01d2aa9dba4ad365d
-      size: 103
+      md5: 406356a40c3b27a740c13aad70f0726e
+      size: 104
     - path: models/model.pth
       hash: md5
-      md5: f46c7718a094af2df45b35756ea2b857
+      md5: 796b897eb074db300fa8d1618f409be5
       size: 111357211
     - path: models/model_metadata.json
       hash: md5
@@ -125,7 +125,7 @@ stages:
       size: 3290
     - path: models/model.pth
       hash: md5
-      md5: f46c7718a094af2df45b35756ea2b857
+      md5: 796b897eb074db300fa8d1618f409be5
       size: 111357211
     - path: models/model_metadata.json
       hash: md5
@@ -137,9 +137,9 @@ stages:
     outs:
     - path: metrics/confusion_matrix.csv
       hash: md5
-      md5: 3d873ea29aca7fa41c2cbf10f1aa838d
+      md5: fef9ca93ddfd2a9a998a1c96bb2281f5
       size: 171
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: 2abd64fb54fa155f95ffdaa26d2bb5c5
-      size: 78
+      md5: ab982af9a593b11072e1f562ad4f6934
+      size: 77
