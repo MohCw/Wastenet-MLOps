@@ -5,16 +5,23 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Annotated
 
 import mlflow.pytorch
+import numpy as np
 import timm
 from timm.data import resolve_data_config, create_transform
 import torch
 from PIL import Image
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException
+from fastapi import UploadFile as _UploadFile
+from fastapi.responses import RedirectResponse
 from loguru import logger
+from pydantic import WithJsonSchema
 
 from garbage_classification.config import PROJ_ROOT
+
+UploadFile = Annotated[_UploadFile, WithJsonSchema({"type": "string", "format": "binary"})]
 
 # Class names in alphabetical order — matches ImageFolder ordering used during training
 # (cardboard=0, glass=1, metal=2, paper=3, plastic=4, trash=5)
@@ -49,8 +56,48 @@ def _load_model() -> tuple[torch.nn.Module, object, torch.device]:
     return model, transform, device
 
 
-def _log_prediction(filename: str, predicted_class: str, confidence: float,
-                    scores: dict, inference_ms: float) -> None:
+def _extract_embedding(model: torch.nn.Module, tensor: torch.Tensor) -> list[float]:
+    """Extract CNN embedding from the penultimate layer via timm forward_features.
+
+    Returns a 1-D float list suitable for drift monitoring (512 dims for ConvNeXt Tiny).
+    The global average pool collapses spatial dimensions so the vector is image-level.
+    """
+    with torch.no_grad():
+        features = model.forward_features(tensor)   # (1, C, H, W) for ConvNeXt
+        if features.dim() == 4:
+            features = features.mean(dim=[2, 3])    # global average pool -> (1, C)
+        return features.squeeze().cpu().numpy().tolist()
+
+
+def _extract_image_properties(image: Image.Image) -> dict:
+    """Compute low-level visual statistics used for image property drift detection.
+
+    Returns a flat dict of scalar features:
+      - brightness : mean pixel intensity (0-1)
+      - blur_score : gradient variance proxy for sharpness (higher = sharper)
+      - r_mean, g_mean, b_mean : per-channel mean intensities (0-1)
+    """
+    arr = np.array(image.convert("RGB"), dtype=np.float32) / 255.0
+    gray = np.array(image.convert("L"), dtype=np.float32)
+    gy, gx = np.gradient(gray)
+    return {
+        "brightness": float(arr.mean()),
+        "blur_score": float(np.var(gx) + np.var(gy)),
+        "r_mean": float(arr[:, :, 0].mean()),
+        "g_mean": float(arr[:, :, 1].mean()),
+        "b_mean": float(arr[:, :, 2].mean()),
+    }
+
+
+def _log_prediction(
+    filename: str,
+    predicted_class: str,
+    confidence: float,
+    scores: dict,
+    inference_ms: float,
+    embedding: list[float],
+    image_props: dict,
+) -> None:
     LOGS_DIR.mkdir(exist_ok=True)
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -59,9 +106,42 @@ def _log_prediction(filename: str, predicted_class: str, confidence: float,
         "confidence": confidence,
         "scores": scores,
         "inference_ms": round(inference_ms, 2),
+        "embedding": embedding,
+        **image_props,
     }
     with PREDICTIONS_LOG.open("a") as f:
         f.write(json.dumps(entry) + "\n")
+
+
+def _predict_one(image: Image.Image, filename: str) -> dict:
+    """Run inference on one decoded image, log it, and return the result dict."""
+    t0 = time.perf_counter()
+    tensor = _transform(image).unsqueeze(0).to(_device)  # type: ignore[operator]
+    with torch.no_grad():
+        probs = torch.softmax(_model(tensor), dim=1)[0]  # type: ignore[operator]
+    inference_ms = (time.perf_counter() - t0) * 1000
+
+    scores = {cls: round(p.item(), 4) for cls, p in zip(CLASS_NAMES, probs)}
+    predicted_class = max(scores, key=scores.get)  # type: ignore[arg-type]
+    embedding = _extract_embedding(_model, tensor)  # type: ignore[arg-type]
+    image_props = _extract_image_properties(image)
+
+    _log_prediction(
+        filename=filename,
+        predicted_class=predicted_class,
+        confidence=scores[predicted_class],
+        scores=scores,
+        inference_ms=inference_ms,
+        embedding=embedding,
+        image_props=image_props,
+    )
+    return {
+        "filename": filename,
+        "predicted_class": predicted_class,
+        "confidence": scores[predicted_class],
+        "scores": scores,
+        "inference_ms": round(inference_ms, 2),
+    }
 
 
 @asynccontextmanager
@@ -88,6 +168,16 @@ def health():
     return {"status": "ok", "model_loaded": _model is not None}
 
 
+@app.get("/monitoring/report", summary="Redirect to drift monitoring dashboard")
+def monitoring_report():
+    """Redirects to the Evidently UI drift dashboard (port 8001).
+
+    Launch the dashboard first:
+        poetry run evidently ui --workspace monitoring/workspace --port 8001
+    """
+    return RedirectResponse(url="http://localhost:8001")
+
+
 @app.post("/predict", summary="Classify a waste image")
 async def predict(file: UploadFile = File(..., description="Image file (jpg, png, webp, ...)")):
     """
@@ -95,7 +185,7 @@ async def predict(file: UploadFile = File(..., description="Image file (jpg, png
     Accepts any image format supported by Pillow (jpg, png, webp, bmp, tiff, ...).
 
     - **predicted_class**: most likely waste category
-    - **confidence**: softmax probability for the top class (0–1)
+    - **confidence**: softmax probability for the top class (0-1)
     - **scores**: softmax probability for each of the 6 waste classes
     - **inference_ms**: model inference time in milliseconds
     """
@@ -110,26 +200,6 @@ async def predict(file: UploadFile = File(..., description="Image file (jpg, png
     except Exception:
         raise HTTPException(status_code=400, detail="Could not decode image")
 
-    t0 = time.perf_counter()
-    tensor = _transform(image).unsqueeze(0).to(_device)  # type: ignore[operator]
-    with torch.no_grad():
-        probs = torch.softmax(_model(tensor), dim=1)[0]  # type: ignore[operator]
-    inference_ms = (time.perf_counter() - t0) * 1000
-
-    scores = {cls: round(prob.item(), 4) for cls, prob in zip(CLASS_NAMES, probs)}
-    predicted_class = max(scores, key=scores.get)  # type: ignore[arg-type]
-
-    _log_prediction(
-        filename=file.filename or "unknown",
-        predicted_class=predicted_class,
-        confidence=scores[predicted_class],
-        scores=scores,
-        inference_ms=inference_ms,
-    )
-
-    return {
-        "predicted_class": predicted_class,
-        "confidence": scores[predicted_class],
-        "scores": scores,
-        "inference_ms": round(inference_ms, 2),
-    }
+    result = _predict_one(image, file.filename or "unknown")
+    # Drop 'filename' to preserve the original single-image response shape
+    return {k: v for k, v in result.items() if k != "filename"}

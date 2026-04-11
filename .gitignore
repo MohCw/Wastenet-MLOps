@@ -198,3 +198,5 @@ models/*.pkl
 
 
 notes/
+monitoring/workspace
+monitoring/reference.parquet
