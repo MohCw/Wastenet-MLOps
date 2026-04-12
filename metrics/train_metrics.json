@@ -1,5 +1,5 @@
 {
-  "best_val_acc": 0.9418960244648318,
-  "best_val_loss": 0.16363877269926422,
-  "epochs_run": 36
+  "best_val_acc": 0.8287461773700305,
+  "best_val_loss": 0.49461983504280765,
+  "epochs_run": 24
 }

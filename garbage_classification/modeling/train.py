@@ -2,6 +2,10 @@ import json
 from pathlib import Path
 import random
 import subprocess
+
+from dotenv import load_dotenv
+load_dotenv()
+
 import numpy as np
 
 import timm
@@ -125,17 +129,22 @@ def build_scheduler(name: str, optimizer, epochs: int, lr: float, warmup_epochs:
 def train_one_epoch(model, loader, optimizer, criterion, device, scheduler=None, needs_val_loss=False):
     model.train()
     running_loss = 0.0
+    running_correct = 0
+    running_total = 0
     for images, labels in loader:
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
-        loss = criterion(model(images), labels)
+        outputs = model(images)
+        loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
         running_loss += loss.item() * images.size(0)
+        running_correct += (outputs.argmax(1) == labels).sum().item()
+        running_total += labels.size(0)
     # cosine scheduler steps per epoch (not per batch)
     if scheduler is not None and not needs_val_loss:
         scheduler.step()
-    return running_loss / len(loader.dataset)
+    return running_loss / len(loader.dataset), running_correct / running_total
 
 
 def evaluate_loader(model, loader, device):
@@ -172,7 +181,7 @@ def main(
     scheduler_name = PARAMS.get("scheduler", "none")
     warmup_epochs = PARAMS.get("warmup_epochs", 3)
 
-    mlflow.set_experiment("garbage-classification/architecture-search")
+    mlflow.set_experiment("garbage-classification/arch-search")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logger.info(f"Model    : {model_arch}")
@@ -232,7 +241,7 @@ def main(
         epochs_run    = 0
 
         for epoch in range(PARAMS["epochs"]):
-            train_loss = train_one_epoch(
+            train_loss, train_acc = train_one_epoch(
                 model, train_loader, optimizer, criterion, device, scheduler, needs_val_loss
             )
             val_loss, val_acc = evaluate_loader(model, val_loader, device)
@@ -243,12 +252,13 @@ def main(
                 scheduler.step(val_loss)
 
             mlflow.log_metrics(
-                {"train_loss": train_loss, "val_loss": val_loss, "val_acc": val_acc},
+                {"train_loss": train_loss, "train_acc": train_acc, "val_loss": val_loss, "val_acc": val_acc},
                 step=epoch,
             )
             logger.info(
                 f"Epoch {epoch+1:>3}/{PARAMS['epochs']}  "
-                f"train_loss={train_loss:.4f}  val_loss={val_loss:.4f}  val_acc={val_acc:.4f}"
+                f"train_loss={train_loss:.4f}  train_acc={train_acc:.4f}  "
+                f"val_loss={val_loss:.4f}  val_acc={val_acc:.4f}"
             )
 
             if val_loss < best_val_loss:
@@ -256,7 +266,7 @@ def main(
                 best_val_acc  = val_acc
                 no_improve    = 0
                 torch.save(model.state_dict(), model_path)
-                logger.info(f"  → Best checkpoint (val_loss={best_val_loss:.4f}  val_acc={best_val_acc:.4f})")
+                logger.info(f"  -> Best checkpoint (val_loss={best_val_loss:.4f}  val_acc={best_val_acc:.4f})")
             else:
                 no_improve += 1
                 if no_improve >= PARAMS["early_stopping_patience"]:
