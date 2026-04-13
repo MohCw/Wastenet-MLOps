@@ -222,8 +222,8 @@ def main(
     model = model.to(device)
 
     with mlflow.start_run(run_name=f"{model_arch}_{strategy}") as run:
-        params_to_log = {k: v for k, v in PARAMS.items() if k != "warmup_epochs"}
-        params_to_log["warmup_epochs"] = warmup_epochs if scheduler_name == "cosine" else "N/A"
+        params_to_log = {f"train.{k}": v for k, v in PARAMS.items() if k != "warmup_epochs"}
+        params_to_log["train.warmup_epochs"] = warmup_epochs if scheduler_name == "cosine" else "N/A"
         mlflow.log_params(params_to_log)
         mlflow.set_tag("mlflow.runName", f"{model_arch}_{strategy}")
         mlflow.set_tag("strategy", strategy)
