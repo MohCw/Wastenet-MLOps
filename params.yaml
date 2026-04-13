@@ -9,7 +9,7 @@ train:
   batch_size: 32
   lr: 0.001
   model_arch: resnet18.tv_in1k
-  strategy: "partial_finetune" # linear_probe | full_finetune | partial_finetune
+  strategy: "full_finetune" # linear_probe | full_finetune | partial_finetune
   early_stopping_patience: 5
   scheduler: "none"  # none | cosine | plateau
   warmup_epochs: 3   # only used when scheduler=cosine
