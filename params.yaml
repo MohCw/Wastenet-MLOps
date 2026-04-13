@@ -12,7 +12,7 @@ train:
   strategy: "linear_probe" # linear_probe | full_finetune | partial_finetune
   early_stopping_patience: 5
   scheduler: "none"  # none | cosine | plateau
-  warmup_epochs: 3     # only used when scheduler=cosine
+  warmup_epochs: 3   # only used when scheduler=cosine
 
 evaluate:
   batch_size: 32
