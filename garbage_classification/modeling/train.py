@@ -225,6 +225,7 @@ def main(
         params_to_log = {k: v for k, v in PARAMS.items() if k != "warmup_epochs"}
         params_to_log["warmup_epochs"] = warmup_epochs if scheduler_name == "cosine" else "N/A"
         mlflow.log_params(params_to_log)
+        mlflow.set_tag("mlflow.runName", f"{model_arch}_{strategy}")
         mlflow.set_tag("strategy", strategy)
         mlflow.set_tag("model_arch", model_arch)
         mlflow.set_tags(get_git_info())
