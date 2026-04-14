@@ -3,7 +3,7 @@
 Garbage image classification pipeline — detects waste type from a photo.
 Classes: **cardboard · glass · metal · paper · plastic · trash**
 
-[![CI](https://github.com/MohCw/wastenet_mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/MohCw/wastenet_mlops/actions)
+[![CI](https://github.com/MohCw/Wastenet-MLOps/actions/workflows/ci.yml/badge.svg)](https://github.com/MohCw/Wastenet-MLOps/actions)
 ![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-79%25-green)
 
