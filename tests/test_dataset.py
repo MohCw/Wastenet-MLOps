@@ -2,8 +2,8 @@ import shutil
 
 from PIL import Image
 
-
 # ── _file_hash ────────────────────────────────────────────────────────────────
+
 
 def test_file_hash_deterministic(tmp_path):
     from garbage_classification.dataset import _file_hash
@@ -24,6 +24,7 @@ def test_file_hash_differs_for_different_files(tmp_path):
 
 
 # ── prepare() ─────────────────────────────────────────────────────────────────
+
 
 def test_prepare_keeps_unique_image(tmp_path, monkeypatch):
     """A single unique image must end up in the cleaned dir."""
@@ -104,6 +105,7 @@ def test_prepare_multiple_classes_independent(tmp_path, monkeypatch):
 
 
 # ── split() ───────────────────────────────────────────────────────────────────
+
 
 def _make_split_env(tmp_path):
     """Helper: build a minimal cleaned dir + split txt files for split() tests."""

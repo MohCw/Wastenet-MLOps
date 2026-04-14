@@ -4,27 +4,25 @@ import random
 import subprocess
 
 from dotenv import load_dotenv
-load_dotenv()
-
+from loguru import logger
+import mlflow
+from mlflow.models import infer_signature
+import mlflow.pytorch
+from mlflow.tracking import MlflowClient
 import numpy as np
-
 import timm
-from timm.data import resolve_data_config, create_transform
-
+from timm.data import create_transform, resolve_data_config
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, ReduceLROnPlateau, SequentialLR
+from torch.utils.data import DataLoader
 from torchvision import datasets
-import mlflow
-import mlflow.pytorch
-from mlflow.models import infer_signature
-from mlflow.tracking import MlflowClient
 import typer
 import yaml
-from loguru import logger
 
 from garbage_classification.config import METRICS_DIR, MODELS_DIR, PROCESSED_DATA_DIR, PROJ_ROOT
+
+load_dotenv()
 
 app = typer.Typer()
 
@@ -34,12 +32,18 @@ PARAMS = yaml.safe_load((PROJ_ROOT / "params.yaml").read_text())["train"]
 def get_git_info() -> dict[str, str]:
     """Return current git commit hash and branch, or empty strings if unavailable."""
     try:
-        commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
-        branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
+        commit = (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+            .decode()
+            .strip()
+        )
+        branch = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL
+            )
+            .decode()
+            .strip()
+        )
     except (subprocess.CalledProcessError, FileNotFoundError):
         commit, branch = "", ""
     return {"git_commit": commit, "git_branch": branch}
@@ -84,19 +88,23 @@ def apply_strategy(model: nn.Module, strategy: str, lr: float) -> torch.optim.Ad
             p.requires_grad = False
         for p in backbone_params[split:]:
             p.requires_grad = True
-        optimizer = torch.optim.Adam([
-            {"params": backbone_params[split:], "lr": lr * 0.1},
-            {"params": head_params,             "lr": lr},
-        ])
+        optimizer = torch.optim.Adam(
+            [
+                {"params": backbone_params[split:], "lr": lr * 0.1},
+                {"params": head_params, "lr": lr},
+            ]
+        )
         logger.info(f"Strategy partial_finetune: last 25% backbone ({n - split} tensors) + head")
 
     elif strategy == "full_finetune":
         third = n // 3
-        optimizer = torch.optim.Adam([
-            {"params": backbone_params[:third],              "lr": lr * 0.01},
-            {"params": backbone_params[third:2 * third],     "lr": lr * 0.1},
-            {"params": backbone_params[2 * third:] + head_params, "lr": lr},
-        ])
+        optimizer = torch.optim.Adam(
+            [
+                {"params": backbone_params[:third], "lr": lr * 0.01},
+                {"params": backbone_params[third : 2 * third], "lr": lr * 0.1},
+                {"params": backbone_params[2 * third :] + head_params, "lr": lr},
+            ]
+        )
         logger.info("Strategy full_finetune: all layers with differential LR")
 
     else:
@@ -116,17 +124,22 @@ def build_scheduler(name: str, optimizer, epochs: int, lr: float, warmup_epochs:
 
     if name == "cosine":
         warmup = LinearLR(optimizer, start_factor=1e-2, total_iters=warmup_epochs)
-        decay  = CosineAnnealingLR(optimizer, T_max=epochs - warmup_epochs, eta_min=lr * 0.01)
-        return SequentialLR(optimizer, schedulers=[warmup, decay], milestones=[warmup_epochs]), False
+        decay = CosineAnnealingLR(optimizer, T_max=epochs - warmup_epochs, eta_min=lr * 0.01)
+        return SequentialLR(
+            optimizer, schedulers=[warmup, decay], milestones=[warmup_epochs]
+        ), False
 
     if name == "plateau":
-        return ReduceLROnPlateau(optimizer, mode="min", factor=0.3, patience=5,
-                                 min_lr=lr * 1e-3), True
+        return ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.3, patience=5, min_lr=lr * 1e-3
+        ), True
 
     raise ValueError(f"Unknown scheduler: {name}")
 
 
-def train_one_epoch(model, loader, optimizer, criterion, device, scheduler=None, needs_val_loss=False):
+def train_one_epoch(
+    model, loader, optimizer, criterion, device, scheduler=None, needs_val_loss=False
+):
     model.train()
     running_loss = 0.0
     running_correct = 0
@@ -175,9 +188,9 @@ def main(
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
-    strategy      = PARAMS.get("strategy", "linear_probe")
-    model_arch    = PARAMS.get("model_arch", "resnet18")
-    lr            = PARAMS.get("lr", 1e-3)
+    strategy = PARAMS.get("strategy", "linear_probe")
+    model_arch = PARAMS.get("model_arch", "resnet18")
+    lr = PARAMS.get("lr", 1e-3)
     scheduler_name = PARAMS.get("scheduler", "none")
     warmup_epochs = PARAMS.get("warmup_epochs", 3)
 
@@ -196,11 +209,11 @@ def main(
     model, data_cfg = build_model(model_arch, num_classes=1)
     input_size = data_cfg["input_size"][-2:]  # (H, W) — robust for H != W
     train_transform = create_transform(**data_cfg, is_training=True)
-    val_transform   = create_transform(**data_cfg, is_training=False)
+    val_transform = create_transform(**data_cfg, is_training=False)
     logger.info(f"Input size: {input_size}")
 
     train_dataset = datasets.ImageFolder(train_dir, transform=train_transform)
-    val_dataset   = datasets.ImageFolder(val_dir,   transform=val_transform)
+    val_dataset = datasets.ImageFolder(val_dir, transform=val_transform)
 
     train_loader = DataLoader(
         train_dataset,
@@ -223,7 +236,9 @@ def main(
 
     with mlflow.start_run(run_name=f"{model_arch}_{strategy}") as run:
         params_to_log = {f"train.{k}": v for k, v in PARAMS.items() if k != "warmup_epochs"}
-        params_to_log["train.warmup_epochs"] = warmup_epochs if scheduler_name == "cosine" else "N/A"
+        params_to_log["train.warmup_epochs"] = (
+            warmup_epochs if scheduler_name == "cosine" else "N/A"
+        )
         mlflow.log_params(params_to_log)
         mlflow.set_tag("mlflow.runName", f"{model_arch}_{strategy}")
         mlflow.set_tag("strategy", strategy)
@@ -237,9 +252,9 @@ def main(
         criterion = nn.CrossEntropyLoss()
 
         best_val_loss = float("inf")
-        best_val_acc  = 0.0
-        no_improve    = 0
-        epochs_run    = 0
+        best_val_acc = 0.0
+        no_improve = 0
+        epochs_run = 0
 
         for epoch in range(PARAMS["epochs"]):
             train_loss, train_acc = train_one_epoch(
@@ -253,36 +268,48 @@ def main(
                 scheduler.step(val_loss)
 
             mlflow.log_metrics(
-                {"train_loss": train_loss, "train_acc": train_acc, "val_loss": val_loss, "val_acc": val_acc},
+                {
+                    "train_loss": train_loss,
+                    "train_acc": train_acc,
+                    "val_loss": val_loss,
+                    "val_acc": val_acc,
+                },
                 step=epoch,
             )
             logger.info(
-                f"Epoch {epoch+1:>3}/{PARAMS['epochs']}  "
+                f"Epoch {epoch + 1:>3}/{PARAMS['epochs']}  "
                 f"train_loss={train_loss:.4f}  train_acc={train_acc:.4f}  "
                 f"val_loss={val_loss:.4f}  val_acc={val_acc:.4f}"
             )
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
-                best_val_acc  = val_acc
-                no_improve    = 0
+                best_val_acc = val_acc
+                no_improve = 0
                 torch.save(model.state_dict(), model_path)
-                logger.info(f"  -> Best checkpoint (val_loss={best_val_loss:.4f}  val_acc={best_val_acc:.4f})")
+                logger.info(
+                    f"  -> Best checkpoint (val_loss={best_val_loss:.4f}  val_acc={best_val_acc:.4f})"
+                )
             else:
                 no_improve += 1
                 if no_improve >= PARAMS["early_stopping_patience"]:
                     logger.info(
-                        f"Early stopping triggered at epoch {epoch+1} "
+                        f"Early stopping triggered at epoch {epoch + 1} "
                         f"(patience={PARAMS['early_stopping_patience']})"
                     )
                     break
 
         # Save metadata (arch + classes + input size) for predict.py
-        metadata_path.write_text(json.dumps({
-            "arch": model_arch,
-            "num_classes": NUM_CLASSES,
-            "input_size": list(input_size),
-        }, indent=2))
+        metadata_path.write_text(
+            json.dumps(
+                {
+                    "arch": model_arch,
+                    "num_classes": NUM_CLASSES,
+                    "input_size": list(input_size),
+                },
+                indent=2,
+            )
+        )
 
         # Save metrics
         mlflow.log_metrics({"best_val_acc": best_val_acc, "best_val_loss": best_val_loss})
@@ -291,7 +318,7 @@ def main(
         # MLflow model signature
         model.eval()
         with torch.no_grad():
-            dummy_input  = torch.zeros(1, 3, *input_size).to(device)
+            dummy_input = torch.zeros(1, 3, *input_size).to(device)
             dummy_output = model(dummy_input)
         signature = infer_signature(dummy_input.cpu().numpy(), dummy_output.cpu().numpy())
 
@@ -309,7 +336,7 @@ def main(
 
             champion_acc = 0.0
             try:
-                champion_mv  = client.get_model_version_by_alias("garbage-classifier", "champion")
+                champion_mv = client.get_model_version_by_alias("garbage-classifier", "champion")
                 champion_run = client.get_run(champion_mv.run_id)
                 champion_acc = champion_run.data.metrics.get("best_val_acc", 0.0)
             except Exception:

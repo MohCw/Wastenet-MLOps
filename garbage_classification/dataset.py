@@ -1,11 +1,11 @@
-import hashlib
-import shutil
 from collections import defaultdict
+import hashlib
 from pathlib import Path
+import shutil
 
-import typer
 from loguru import logger
 from tqdm import tqdm
+import typer
 
 from garbage_classification.config import INTERIM_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
 
@@ -88,8 +88,8 @@ def split():
     """Organize cleaned images into data/processed/{train,val,test}/{class}/ using predefined splits."""
     splits = {
         "train": RAW_DATA_DIR / "one-indexed-files-notrash_train.txt",
-        "val":   RAW_DATA_DIR / "one-indexed-files-notrash_val.txt",
-        "test":  RAW_DATA_DIR / "one-indexed-files-notrash_test.txt",
+        "val": RAW_DATA_DIR / "one-indexed-files-notrash_val.txt",
+        "test": RAW_DATA_DIR / "one-indexed-files-notrash_test.txt",
     }
 
     for split_name, txt_path in splits.items():

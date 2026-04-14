@@ -1,7 +1,7 @@
 import io
 
-import pytest
 from PIL import Image
+import pytest
 
 
 def test_health(client):

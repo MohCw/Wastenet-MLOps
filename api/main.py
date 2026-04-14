@@ -1,23 +1,21 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 import io
 import json
 import os
 import time
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Annotated
 
-import mlflow.pytorch
-import numpy as np
-import timm
-from timm.data import resolve_data_config, create_transform
-import torch
-from PIL import Image
 from fastapi import FastAPI, File, HTTPException
 from fastapi import UploadFile as _UploadFile
 from fastapi.responses import RedirectResponse
 from loguru import logger
+import mlflow.pytorch
+import numpy as np
+from PIL import Image
 from pydantic import WithJsonSchema
+from timm.data import create_transform, resolve_data_config
+import torch
 
 from garbage_classification.config import PROJ_ROOT
 
@@ -36,9 +34,7 @@ _device: torch.device | None = None
 
 
 def _load_model() -> tuple[torch.nn.Module, object, torch.device]:
-    tracking_uri = os.getenv(
-        "MLFLOW_TRACKING_URI", f"sqlite:///{PROJ_ROOT / 'mlflow.db'}"
-    )
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{PROJ_ROOT / 'mlflow.db'}")
     mlflow.set_tracking_uri(tracking_uri)
     logger.info(f"MLflow tracking URI: {tracking_uri}")
 
@@ -63,9 +59,9 @@ def _extract_embedding(model: torch.nn.Module, tensor: torch.Tensor) -> list[flo
     The global average pool collapses spatial dimensions so the vector is image-level.
     """
     with torch.no_grad():
-        features = model.forward_features(tensor)   # (1, C, H, W) for ConvNeXt
+        features = model.forward_features(tensor)  # (1, C, H, W) for ConvNeXt
         if features.dim() == 4:
-            features = features.mean(dim=[2, 3])    # global average pool -> (1, C)
+            features = features.mean(dim=[2, 3])  # global average pool -> (1, C)
         return features.squeeze().cpu().numpy().tolist()
 
 
