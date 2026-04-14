@@ -42,6 +42,7 @@ dependencies = [
     "python-multipart (>=0.0.24,<0.0.25)",
     "uvicorn (>=0.44.0,<0.45.0)",
     "evidently (==0.6.7)",
+    "pytest-cov (>=7.1.0,<8.0.0)",
 ]
 requires-python = "~=3.10.0"
 
@@ -49,7 +50,7 @@ requires-python = "~=3.10.0"
 [tool.ruff]
 line-length = 99
 src = ["garbage_classification"]
-include = ["pyproject.toml", "garbage_classification/**/*.py"]
+include = ["pyproject.toml", "garbage_classification/**/*.py", "tests/**/*.py", "api/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
@@ -57,6 +58,19 @@ extend-select = ["I"]  # Add import sorting
 [tool.ruff.lint.isort]
 known-first-party = ["garbage_classification"]
 force-sort-within-sections = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=garbage_classification --cov=api --cov-report=term-missing --cov-fail-under=70"
+
+[tool.coverage.run]
+omit = [
+    "garbage_classification/modeling/train.py",
+    "garbage_classification/modeling/predict.py",
+    "garbage_classification/features.py",
+    "garbage_classification/plots.py",
+    "garbage_classification/download_dataset.py",
+]
 
 [[tool.poetry.source]]
 name = "pytorch"
