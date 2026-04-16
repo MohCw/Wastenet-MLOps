@@ -52,19 +52,6 @@ def _load_model() -> tuple[torch.nn.Module, object, torch.device]:
     return model, transform, device
 
 
-def _extract_embedding(model: torch.nn.Module, tensor: torch.Tensor) -> list[float]:
-    """Extract CNN embedding from the penultimate layer via timm forward_features.
-
-    Returns a 1-D float list suitable for drift monitoring (512 dims for ConvNeXt Tiny).
-    The global average pool collapses spatial dimensions so the vector is image-level.
-    """
-    with torch.no_grad():
-        features = model.forward_features(tensor)  # (1, C, H, W) for ConvNeXt
-        if features.dim() == 4:
-            features = features.mean(dim=[2, 3])  # global average pool -> (1, C)
-        return features.squeeze().cpu().numpy().tolist()
-
-
 def _extract_image_properties(image: Image.Image) -> dict:
     """Compute low-level visual statistics used for image property drift detection.
 
@@ -113,13 +100,22 @@ def _predict_one(image: Image.Image, filename: str) -> dict:
     """Run inference on one decoded image, log it, and return the result dict."""
     t0 = time.perf_counter()
     tensor = _transform(image).unsqueeze(0).to(_device)  # type: ignore[operator]
+
     with torch.no_grad():
-        probs = torch.softmax(_model(tensor), dim=1)[0]  # type: ignore[operator]
+        # Single backbone pass — derive both embedding and logits without recalculation
+        features = _model.forward_features(tensor)  # type: ignore[union-attr]  # (1, C, H, W)
+        if features.dim() == 4:
+            pooled = features.mean(dim=[2, 3])  # global average pool -> (1, C)
+        else:
+            pooled = features
+        embedding: list[float] = pooled.squeeze().cpu().numpy().tolist()
+        logits = _model.forward_head(features)  # type: ignore[union-attr]  # pool + drop + FC
+        probs = torch.softmax(logits, dim=1)[0]
+
     inference_ms = (time.perf_counter() - t0) * 1000
 
     scores = {cls: round(p.item(), 4) for cls, p in zip(CLASS_NAMES, probs)}
     predicted_class = max(scores, key=scores.get)  # type: ignore[arg-type]
-    embedding = _extract_embedding(_model, tensor)  # type: ignore[arg-type]
     image_props = _extract_image_properties(image)
 
     _log_prediction(
