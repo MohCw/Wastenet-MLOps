@@ -299,6 +299,9 @@ def main(
                     )
                     break
 
+        # Reload best checkpoint 
+        model.load_state_dict(torch.load(model_path, map_location=device))
+
         # Save metadata (arch + classes + input size) for predict.py
         metadata_path.write_text(
             json.dumps(

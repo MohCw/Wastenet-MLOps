@@ -30,7 +30,7 @@ def main(
 ):
     METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
-    mlflow.set_experiment("garbage-classification/architecture-search")
+    mlflow.set_experiment("garbage-classification/arch-search")
 
     logger.info(f"Model   : {model_path}")
     logger.info(f"Test dir: {test_dir}")
