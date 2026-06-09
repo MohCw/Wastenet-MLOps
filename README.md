@@ -7,7 +7,7 @@ Classes: **cardboard · glass · metal · paper · plastic · trash**
 ![Tests](https://img.shields.io/badge/tests-25%20passed-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-79%25-green)
 
-**Stack:** DVC · MLflow · FastAPI · Docker · GitHub Actions · Evidently AI
+**Stack:** DVC · MLflow · FastAPI · Docker · GitHub Actions · Evidently AI · Railway · DagsHub
 
 ---
 
@@ -17,14 +17,13 @@ Classes: **cardboard · glass · metal · paper · plastic · trash**
 data/raw/
     └─ DVC pipeline ──► data/processed/{train,val,test}/
                                │
-                          train.py  ──► MLflow Model Registry (@champion)
+                          train.py  ──► DagsHub MLflow Registry 
                                                │
-                                         api/main.py (FastAPI)
-                                               │  └─► logs/predictions.jsonl
+                                         api/main.py (FastAPI on Railway)
+                                               │  └─► logs/predictions.jsonl (volume)
                                          Docker container       │
-                                                          monitoring/run_drift.py
-                                                               │
-                                                         Evidently UI dashboard
+                                                          monitoring/run_drift.py (local)
+                                                                └─► monitoring/static/*.html
 ```
 
 ---
@@ -110,16 +109,29 @@ Best run promoted automatically to `@champion` alias in the `garbage-classifier`
 
 ## Monitoring (Evidently AI)
 
-After making predictions via the API (`logs/predictions.jsonl` is populated):
+Drift detection compares the production prediction distribution (`logs/predictions.jsonl`) against the
+training-set reference (`monitoring/reference.parquet`). It covers predicted-class / confidence /
+image-property drift **and** CNN-embedding drift (domain-classifier method).
 
 ```bash
-# 1. Run drift detection (compares prod distribution vs training set)
+# Run drift detection — also exports standalone HTML to monitoring/static/
 poetry run python -m monitoring.run_drift
+```
 
-# 2. Launch dashboard
+### Local — interactive time-series dashboard
+```bash
 poetry run evidently ui --workspace monitoring/workspace --port 8001
 # → http://localhost:8001
 ```
+
+### Online — static HTML served by the API
+`run_drift.py` also writes self-contained reports to `monitoring/static/`, which FastAPI serves:
+
+- `GET /monitoring/` → scalar-feature drift report (`index.html`)
+- `GET /monitoring/embedding_drift.html` → embedding drift report (only when ≥ 20 predictions logged)
+
+To refresh the online dashboard: regenerate locally (`run_drift`), then commit `monitoring/static/*.html`
+and push — Railway redeploys with the updated snapshot. It is a **point-in-time snapshot**, not live.
 
 ---
 
@@ -129,7 +141,10 @@ poetry run evidently ui --workspace monitoring/workspace --port 8001
 |---|---|
 | FastAPI (inference API) | `8000` |
 | MLflow UI | `5000` |
-| Evidently UI (monitoring) | `8001` |
+| Evidently UI (local time-series dashboard) | `8001` |
+
+> In production the monitoring dashboard is served as static HTML by the API at `/monitoring/`
+> (no separate port). Port `8001` is only used for the local interactive Evidently UI.
 
 ---
 
@@ -164,9 +179,11 @@ Run a single stage: `dvc repro <stage>`
 │   ├── test_data.py            # CLASS_NAMES tests (2 tests)
 │   └── test_dataset.py         # Dataset pipeline tests (9 tests)
 ├── monitoring/
-│   └── run_drift.py            # Evidently drift detection
+│   ├── run_drift.py            # Evidently drift detection + static HTML export
+│   ├── build_reference.py      # Builds reference.parquet from the training set
+│   └── static/                 # Generated drift reports, served at /monitoring/
 ├── logs/
-│   └── predictions.jsonl       # Production prediction log (gitignored)
+│   └── predictions.jsonl       # Production prediction log 
 ├── dvc.yaml                    # Pipeline definition
 ├── params.yaml                 # Hyperparameters
 ├── Dockerfile
