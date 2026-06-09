@@ -96,16 +96,16 @@ stages:
         train.lr: 0.001
         train.model_arch: resnet18.tv_in1k
         train.scheduler: none
-        train.strategy: partial_finetune
+        train.strategy: full_finetune
         train.warmup_epochs: 3
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 588e8a90cd68846e03991191f38897e1
+      md5: 7673311e7094dba6e33f218f21ecdcd8
       size: 103
     - path: models/model.pth
       hash: md5
-      md5: 1845f98be77f6a5a281d6000ef2f990b
+      md5: d3c10adf2db5fc1c58113b03889727f7
       size: 44791819
     - path: models/model_metadata.json
       hash: md5
@@ -125,7 +125,7 @@ stages:
       size: 3384
     - path: models/model.pth
       hash: md5
-      md5: 1845f98be77f6a5a281d6000ef2f990b
+      md5: d3c10adf2db5fc1c58113b03889727f7
       size: 44791819
     - path: models/model_metadata.json
       hash: md5
@@ -137,9 +137,9 @@ stages:
     outs:
     - path: metrics/confusion_matrix.csv
       hash: md5
-      md5: a1fcb1e2f5d047285c7cc5c4371a8630
+      md5: f2afd61234b97418b21fad36dc3a1b07
       size: 171
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: c8adc57bbb02ec1e9a3139857a979f8f
+      md5: aa7cdc40643fea05109638280a0ab2b7
       size: 78
