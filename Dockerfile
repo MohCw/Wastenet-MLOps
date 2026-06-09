@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir \
 
 COPY garbage_classification/ ./garbage_classification/
 COPY api/ ./api/
+COPY monitoring/static/ ./monitoring/static/
 
 EXPOSE 8000
 

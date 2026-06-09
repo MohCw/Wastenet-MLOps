@@ -8,7 +8,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException
 from fastapi import UploadFile as _UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 import mlflow.pytorch
 import numpy as np
@@ -27,6 +27,7 @@ CLASS_NAMES = ["cardboard", "glass", "metal", "paper", "plastic", "trash"]
 
 LOGS_DIR = PROJ_ROOT / "logs"
 PREDICTIONS_LOG = LOGS_DIR / "predictions.jsonl"
+MONITORING_STATIC_DIR = PROJ_ROOT / "monitoring" / "static"
 
 _model: torch.nn.Module | None = None
 _transform = None
@@ -154,20 +155,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+if MONITORING_STATIC_DIR.is_dir():
+    app.mount(
+        "/monitoring",
+        StaticFiles(directory=str(MONITORING_STATIC_DIR), html=True),
+        name="monitoring",
+    )
+
 
 @app.get("/health", summary="Health check")
 def health():
     return {"status": "ok", "model_loaded": _model is not None}
-
-
-@app.get("/monitoring/report", summary="Redirect to drift monitoring dashboard")
-def monitoring_report():
-    """Redirects to the Evidently UI drift dashboard (port 8001).
-
-    Launch the dashboard first:
-        poetry run evidently ui --workspace monitoring/workspace --port 8001
-    """
-    return RedirectResponse(url="http://localhost:8001")
 
 
 @app.post("/predict", summary="Classify a waste image")

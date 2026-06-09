@@ -47,6 +47,7 @@ from garbage_classification.config import PROCESSED_DATA_DIR, PROJ_ROOT
 PREDICTIONS_LOG = PROJ_ROOT / "logs" / "predictions.jsonl"
 REFERENCE_PATH = PROJ_ROOT / "monitoring" / "reference.parquet"
 WORKSPACE_DIR = PROJ_ROOT / "monitoring" / "workspace"
+STATIC_DIR = PROJ_ROOT / "monitoring" / "static"
 CLASS_NAMES = ["cardboard", "glass", "metal", "paper", "plastic", "trash"]
 PROJECT_NAME = "WasteNet Garbage Classifier"
 
@@ -335,7 +336,9 @@ def run() -> None:
         column_mapping=None,
     )
     ws.add_report(project.id, report1)
-    logger.success("Report 1 saved.")
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    report1.save_html(str(STATIC_DIR / "index.html"))
+    logger.success(f"Report 1 saved (workspace + HTML -> {STATIC_DIR / 'index.html'}).")
 
     # -------------------------------------------------------------------------
     # Report 2: Embedding drift via domain classifier (ROC-AUC method)
@@ -369,7 +372,11 @@ def run() -> None:
             column_mapping=col_mapping,
         )
         ws.add_report(project.id, report2)
-        logger.success("Report 2 (embedding drift) saved.")
+        report2.save_html(str(STATIC_DIR / "embedding_drift.html"))
+        logger.success(
+            f"Report 2 (embedding drift) saved (workspace + HTML -> "
+            f"{STATIC_DIR / 'embedding_drift.html'})."
+        )
     elif not common_emb_cols:
         logger.warning(
             "No embedding columns found. "
