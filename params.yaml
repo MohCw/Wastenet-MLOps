@@ -8,8 +8,8 @@ train:
   epochs: 30
   batch_size: 32
   lr: 0.001
-  model_arch: mobilenetv4_conv_medium.e500_r224_in1k
-  strategy: "partial_finetune" # linear_probe | full_finetune | partial_finetune
+  model_arch: convnext_tiny.in12k_ft_in1k
+  strategy: "linear_probe" # linear_probe | full_finetune | partial_finetune
   early_stopping_patience: 5
   scheduler: "none"  # none | cosine | plateau
   warmup_epochs: 3   # only used when scheduler=cosine
