@@ -1,0 +1,47 @@
+# Version control
+.git/
+.gitignore
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Data and ML artifacts (not needed at inference — model is pulled from DagsHub)
+data/
+mlruns/
+mlflow.db
+models/
+
+# Notebooks, docs and reports
+notebooks/
+docs/
+references/
+reports/
+notes/
+
+# Monitoring workspace and reference (regenerated locally)
+monitoring/workspace/
+monitoring/reference.parquet
+
+# Tests
+tests/
+
+# Secrets
+.env
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# DVC cache
+.dvc/cache
+
+# OS files
+.DS_Store

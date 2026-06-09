@@ -68,6 +68,7 @@ addopts = "-v --cov=garbage_classification --cov=api --cov-report=term-missing -
 omit = [
     "garbage_classification/modeling/train.py",
     "garbage_classification/modeling/predict.py",
+    "garbage_classification/modeling/tune.py",
     "garbage_classification/features.py",
     "garbage_classification/plots.py",
     "garbage_classification/download_dataset.py",
