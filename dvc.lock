@@ -95,17 +95,17 @@ stages:
         train.epochs: 30
         train.lr: 0.001
         train.model_arch: convnext_tiny.in12k_ft_in1k
-        train.scheduler: none
-        train.strategy: full_finetune
+        train.scheduler: cosine
+        train.strategy: partial_finetune
         train.warmup_epochs: 3
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: e65f51dc93201c62fef4c7d67533650e
-      size: 104
+      md5: 308b1c6ec5f231b0673253e92df5141b
+      size: 103
     - path: models/model.pth
       hash: md5
-      md5: 75e49edc825b92fb1888edd1b3e8f541
+      md5: 3426621fff064762ccfd7ad967e98bc0
       size: 111357211
     - path: models/model_metadata.json
       hash: md5
@@ -125,7 +125,7 @@ stages:
       size: 3384
     - path: models/model.pth
       hash: md5
-      md5: 75e49edc825b92fb1888edd1b3e8f541
+      md5: 3426621fff064762ccfd7ad967e98bc0
       size: 111357211
     - path: models/model_metadata.json
       hash: md5
@@ -137,9 +137,9 @@ stages:
     outs:
     - path: metrics/confusion_matrix.csv
       hash: md5
-      md5: 65742473260a2ff5c2d4cfbdd3433f4f
+      md5: 9d1c13a8902bb70647bb619b42591ace
       size: 171
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: 27f91c79e5530a7248478c96affc173c
-      size: 77
+      md5: fa7a1d6bd7bd6b6c23fb5a087359b0f3
+      size: 78
