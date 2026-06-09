@@ -55,12 +55,18 @@ def _build_loaders(device):
     train_ds = datasets.ImageFolder(PROCESSED_DATA_DIR / "train", transform=train_tf)
     val_ds = datasets.ImageFolder(PROCESSED_DATA_DIR / "val", transform=val_tf)
     train_loader = DataLoader(
-        train_ds, batch_size=BATCH_SIZE, shuffle=True,
-        num_workers=0, pin_memory=torch.cuda.is_available(),
+        train_ds,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=torch.cuda.is_available(),
     )
     val_loader = DataLoader(
-        val_ds, batch_size=BATCH_SIZE, shuffle=False,
-        num_workers=0, pin_memory=torch.cuda.is_available(),
+        val_ds,
+        batch_size=BATCH_SIZE,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=torch.cuda.is_available(),
     )
     logger.info(f"Loaders built — {len(train_ds.classes)} classes, input {input_size}")
     return train_loader, val_loader, len(train_ds.classes)
