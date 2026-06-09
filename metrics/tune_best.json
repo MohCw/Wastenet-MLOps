@@ -1,0 +1,7 @@
+{
+  "best_val_acc": 0.981651376146789,
+  "lr": 0.001,
+  "scheduler": "cosine",
+  "n_trials": 9,
+  "n_pruned": 5
+}
