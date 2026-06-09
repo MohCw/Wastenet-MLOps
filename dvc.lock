@@ -10,8 +10,8 @@ stages:
       nfiles: 2527
     - path: garbage_classification/dataset.py
       hash: md5
-      md5: 22d60e6526e2039b0294045a4d3bf219
-      size: 4526
+      md5: f3d8ef2a4e441bb1917dea3150a4b275
+      size: 4523
     params:
       params.yaml:
         prepare.image_extensions:
@@ -50,8 +50,8 @@ stages:
       size: 5147
     - path: garbage_classification/dataset.py
       hash: md5
-      md5: 22d60e6526e2039b0294045a4d3bf219
-      size: 4526
+      md5: f3d8ef2a4e441bb1917dea3150a4b275
+      size: 4523
     params:
       params.yaml:
         split.seed: 42
@@ -86,31 +86,31 @@ stages:
       nfiles: 327
     - path: garbage_classification/modeling/train.py
       hash: md5
-      md5: cd2c79c2fe8ca9f6d18f47cdf36a955b
-      size: 12895
+      md5: 6f7b8099922bb0ed0bad305c78ad5f73
+      size: 14175
     params:
       params.yaml:
         train.batch_size: 32
-        train.early_stopping_patience: 10
-        train.epochs: 50
+        train.early_stopping_patience: 5
+        train.epochs: 30
         train.lr: 0.001
-        train.model_arch: convnext_tiny.in12k_ft_in1k
-        train.scheduler: plateau
+        train.model_arch: resnet18.tv_in1k
+        train.scheduler: none
         train.strategy: linear_probe
         train.warmup_epochs: 3
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 406356a40c3b27a740c13aad70f0726e
+      md5: 6ff811de9d48195a070f5b09c20ace68
       size: 104
     - path: models/model.pth
       hash: md5
-      md5: 796b897eb074db300fa8d1618f409be5
-      size: 111357211
+      md5: efbcdcff14670c8d66946fe1fcfc63f2
+      size: 44791819
     - path: models/model_metadata.json
       hash: md5
-      md5: 0ee09f94d48ab1a1bf87dc903b904a98
-      size: 110
+      md5: cea4c5465934324761bd3e69d7e99fde
+      size: 99
   evaluate:
     cmd: poetry run python -m garbage_classification.modeling.predict
     deps:
@@ -121,25 +121,25 @@ stages:
       nfiles: 430
     - path: garbage_classification/modeling/predict.py
       hash: md5
-      md5: 49e381c406fc72cb72445b28a013e6cf
-      size: 3290
+      md5: abcba25f6375f892186a7683888aa943
+      size: 3384
     - path: models/model.pth
       hash: md5
-      md5: 796b897eb074db300fa8d1618f409be5
-      size: 111357211
+      md5: efbcdcff14670c8d66946fe1fcfc63f2
+      size: 44791819
     - path: models/model_metadata.json
       hash: md5
-      md5: 0ee09f94d48ab1a1bf87dc903b904a98
-      size: 110
+      md5: cea4c5465934324761bd3e69d7e99fde
+      size: 99
     params:
       params.yaml:
         evaluate.batch_size: 32
     outs:
     - path: metrics/confusion_matrix.csv
       hash: md5
-      md5: fef9ca93ddfd2a9a998a1c96bb2281f5
+      md5: 4c4c807c92e1d02960e551c0bbea8f9d
       size: 171
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: ab982af9a593b11072e1f562ad4f6934
-      size: 77
+      md5: 5dbf05ce0fbc356cdfcbbd3b25df3a1d
+      size: 78
