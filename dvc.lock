@@ -94,23 +94,23 @@ stages:
         train.early_stopping_patience: 5
         train.epochs: 30
         train.lr: 0.001
-        train.model_arch: resnet18.tv_in1k
+        train.model_arch: convnext_tiny.in12k_ft_in1k
         train.scheduler: none
-        train.strategy: full_finetune
+        train.strategy: partial_finetune
         train.warmup_epochs: 3
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 7673311e7094dba6e33f218f21ecdcd8
-      size: 103
+      md5: 3bc69bfcf25c718e69216d3bc623ae0f
+      size: 104
     - path: models/model.pth
       hash: md5
-      md5: d3c10adf2db5fc1c58113b03889727f7
-      size: 44791819
+      md5: 77e3d16035cfb8217968793c8f48423a
+      size: 111357211
     - path: models/model_metadata.json
       hash: md5
-      md5: cea4c5465934324761bd3e69d7e99fde
-      size: 99
+      md5: 0ee09f94d48ab1a1bf87dc903b904a98
+      size: 110
   evaluate:
     cmd: poetry run python -m garbage_classification.modeling.predict
     deps:
@@ -125,21 +125,21 @@ stages:
       size: 3384
     - path: models/model.pth
       hash: md5
-      md5: d3c10adf2db5fc1c58113b03889727f7
-      size: 44791819
+      md5: 77e3d16035cfb8217968793c8f48423a
+      size: 111357211
     - path: models/model_metadata.json
       hash: md5
-      md5: cea4c5465934324761bd3e69d7e99fde
-      size: 99
+      md5: 0ee09f94d48ab1a1bf87dc903b904a98
+      size: 110
     params:
       params.yaml:
         evaluate.batch_size: 32
     outs:
     - path: metrics/confusion_matrix.csv
       hash: md5
-      md5: f2afd61234b97418b21fad36dc3a1b07
+      md5: 0d041b666f67e88bfcc84b1838169d21
       size: 171
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: aa7cdc40643fea05109638280a0ab2b7
+      md5: bb56e37f336cbe295e5edc6a67fbb2ba
       size: 78
