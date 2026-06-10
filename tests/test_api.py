@@ -11,11 +11,6 @@ def test_health(client):
     assert "model_loaded" in r.json()
 
 
-def test_monitoring_report_redirects(client):
-    r = client.get("/monitoring/report", follow_redirects=False)
-    assert r.status_code in (301, 302, 307, 308)
-
-
 def test_predict_no_file(client):
     r = client.post("/predict")
     assert r.status_code == 422
@@ -147,3 +142,26 @@ def test_predict_response_schema(client, monkeypatch):
     assert set(data.keys()) == {"predicted_class", "confidence", "scores", "inference_ms"}
     assert data["confidence"] == max(data["scores"].values())
     assert data["inference_ms"] > 0
+
+
+def test_monitoring_documented_in_openapi(client):
+    schema = client.get("/openapi.json").json()
+    assert "/monitoring" in schema["paths"]
+
+
+def test_monitoring_redirects_when_available(client, monkeypatch, tmp_path):
+    import api.main as m
+
+    monkeypatch.setattr(m, "MONITORING_STATIC_DIR", tmp_path)  # existing dir
+    r = client.get("/monitoring", follow_redirects=False)
+    assert r.status_code == 307
+    assert r.headers["location"].endswith("/monitoring/")
+
+
+def test_monitoring_404_when_not_generated(client, monkeypatch, tmp_path):
+    import api.main as m
+
+    monkeypatch.setattr(m, "MONITORING_STATIC_DIR", tmp_path / "missing")  # absent dir
+    r = client.get("/monitoring", follow_redirects=False)
+    assert r.status_code == 404
+    assert "run_drift" in r.json()["detail"]
