@@ -9,6 +9,8 @@ Classes: **cardboard · glass · metal · paper · plastic · trash**
 
 **Stack:** DVC · MLflow · FastAPI · Docker · GitHub Actions · Evidently AI · Railway · DagsHub
 
+**Links:** [📖 Docs](https://mohcw.github.io/Wastenet-MLOps/) · [📊 MLflow / DagsHub](https://dagshub.com/MohCw/Wastenet-MLOps)
+
 ---
 
 ## Architecture
