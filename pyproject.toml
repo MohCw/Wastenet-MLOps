@@ -81,3 +81,8 @@ priority = "explicit"
 [tool.poetry.dependencies]
 torch = {source = "pytorch"}
 torchvision = {source = "pytorch"}
+
+[dependency-groups]
+docs = [
+    "mkdocs-material (>=9.7.6,<10.0.0)"
+]

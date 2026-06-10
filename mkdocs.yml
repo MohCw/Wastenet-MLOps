@@ -1,0 +1,67 @@
+site_name: WasteNet MLOps — Architecture
+site_author: MohCw
+site_url: https://mohcw.github.io/Wastenet-MLOps/
+site_description: >-
+  Documentation d'architecture du projet WasteNet MLOps :
+  classification d'images de déchets (schémas C4/Mermaid + justification des choix).
+docs_dir: docs
+
+theme:
+  name: material
+  language: fr
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      accent: green
+      toggle:
+        icon: material/weather-night
+        name: Passer en mode sombre
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      accent: green
+      toggle:
+        icon: material/weather-sunny
+        name: Passer en mode clair
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Accueil: index.md
+  - Contexte: context.md
+  - Blocs de construction: building-blocks.md
+  - Vue d'exécution: runtime.md
+  - Déploiement: deployment.md
+  - Monitoring: monitoring.md
+  - Décisions (ADR):
+      - decisions/index.md
+      - 0001 — Modèle ConvNeXt (timm): decisions/0001-modele-convnext-timm.md
+      - 0002 — DVC + DagsHub: decisions/0002-dvc-versioning-dagshub.md
+      - 0003 — MLflow tracking & registry: decisions/0003-mlflow-tracking-registry.md
+      - 0004 — Stratégie partial finetune: decisions/0004-strategie-partial-finetune.md
+      - 0005 — FastAPI + Docker (Railway): decisions/0005-fastapi-docker-serving.md
+      - 0006 — Monitoring Evidently: decisions/0006-evidently-drift-monitoring.md
+      - 0007 — Tuning Optuna: decisions/0007-optuna-grid-search-tuning.md
+      - 0008 — Méthodologie incrémentale: decisions/0008-methodologie-tuning-incrementale.md

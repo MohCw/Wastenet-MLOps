@@ -1,0 +1,5 @@
+# Documentation toolchain (MkDocs Material).
+# Mermaid diagrams are rendered natively by Material via pymdownx.superfences —
+# no extra plugin required. Used both locally (`mkdocs serve`) and by the
+# GitHub Pages workflow (.github/workflows/docs.yml).
+mkdocs-material
