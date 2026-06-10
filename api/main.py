@@ -156,6 +156,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 @app.get(
     "/monitoring",
     tags=["monitoring"],
