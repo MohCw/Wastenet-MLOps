@@ -1,4 +1,10 @@
-site_name: wastenet_mlops
-# 
+site_name: WasteNet MLOps
 site_author: Mohamed
-# 
+site_description: Documentation du pipeline MLOps de classification d'ordures
+
+nav:
+  - Accueil: index.md
+  - Demarrage: getting-started.md
+  - Architecture: architecture.md
+
+theme: readthedocs
